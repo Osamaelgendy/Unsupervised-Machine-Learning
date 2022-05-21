@@ -1,0 +1,112 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import time
+from sklearn.model_selection import train_test_split
+from scipy.sparse import coo_matrix, csr_matrix
+from scipy.spatial.distance import jaccard, cosine 
+from pytest import approx
+MV_users = pd.read_csv('data/users.csv')
+MV_movies = pd.read_csv('data/movies.csv')
+train = pd.read_csv('data/train.csv')
+test = pd.read_csv('data/test.csv')
+from collections import namedtuple
+Data = namedtuple('Data', ['users','movies','train','test'])
+data = Data(MV_users, MV_movies, train, test)
+
+########### Baseline Model ##########
+class RecSys():
+    def __init__(self,data):
+        self.data=data
+        self.allusers = list(self.data.users['uID'])
+        self.allmovies = list(self.data.movies['mID'])
+        self.genres = list(self.data.movies.columns.drop(['mID', 'title', 'year']))
+        self.mid2idx = dict(zip(self.data.movies.mID,list(range(len(self.data.movies)))))
+        self.uid2idx = dict(zip(self.data.users.uID,list(range(len(self.data.users)))))
+        self.Mr=self.rating_matrix()
+        self.Mm=None 
+        self.sim=np.zeros((len(self.allmovies),len(self.allmovies)))
+        
+    def rating_matrix(self):
+        """
+        Convert the rating matrix to numpy array of shape (#allusers,#allmovies)
+        """
+        ind_movie = [self.mid2idx[x] for x in self.data.train.mID] 
+        ind_user = [self.uid2idx[x] for x in self.data.train.uID]
+        rating_train = list(train.rating)
+        return np.array(coo_matrix((rating_train, (ind_user, ind_movie)), shape=(len(self.allusers), len(self.allmovies))).toarray())
+
+
+    def predict_everything_to_3(self):
+        """
+        Predict everything to 3 for the test data
+        """
+        # your code here
+        new_test = self.data.test.copy()
+        for i in range(new_test.rating.shape[0]):
+               new_test.rating[i] = 3
+                
+                
+        return new_test.rating      
+            
+        
+    def predict_to_user_average(self):
+        import statistics as st
+        """
+        Predict to average rating for the user.
+        Returns numpy array of shape (#users,)
+        """
+        # your code here
+        new_test2 = self.data.test.copy()
+        temp = new_test2.sort_values('uID')
+        new_train = self.data.train.copy()
+        mXu = self.rating_matrix().T
+        #means = np.mean(mXu, axis=0)
+        i=0
+        for j in range(mXu.shape[1]):
+            u_list = mXu[:,j].tolist()
+            u_list = [n for n in u_list if n!=0]
+            print(u_list)
+            mean = st.mean(u_list)
+            print(mean)
+            while i < temp.shape[0]: 
+                if temp.iloc[i,0]-1 == j:
+                    print(f"{temp.iloc[i,0]-1}={j}")
+                    temp.rating[i] = mean
+                    i+=1
+                else:
+                    print('next user')
+                    break
+        temp = temp.reset_index(drop=True)    
+        
+        return temp.rating
+        
+        #pass
+ ################ Content Based Model ############      
+ class ContentBased(RecSys):
+    def __init__(self,data):
+        super().__init__(data)
+        self.data=data
+        self.Mm = self.calc_movie_feature_matrix()
+       
+        
+    def calc_movie_feature_matrix(self):
+        """
+        Create movie feature matrix in a numpy array of shape (#allmovies, #genres) 
+        """
+        # your code here
+        movie_matrix = np.array(data.movies.iloc[:,3:])
+        return movie_matrix
+        
+        pass
+    
+    def calc_item_item_similarity(self):
+        from scipy.spatial.distance import cdist
+ 
+        """
+        Create item-item similarity using Jaccard similarity
+        """
+        # your code here
+        #print(self.sim)
+        movie_matrix = self.calc_movie_feature_matrix()
+        self.sim = 1 - cdist(movie_matrix, movie_matrix, 'jaccard')
