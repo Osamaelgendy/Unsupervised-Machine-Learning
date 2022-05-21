@@ -61,7 +61,6 @@ class RecSys():
         temp = new_test2.sort_values('uID')
         new_train = self.data.train.copy()
         mXu = self.rating_matrix().T
-        #means = np.mean(mXu, axis=0)
         i=0
         for j in range(mXu.shape[1]):
             u_list = mXu[:,j].tolist()
