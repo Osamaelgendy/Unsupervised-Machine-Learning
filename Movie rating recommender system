@@ -60,17 +60,16 @@ class RecSys():
         new_test2 = self.data.test.copy()
         temp = new_test2.sort_values('uID')
         new_train = self.data.train.copy()
-        mXu = self.rating_matrix().T
+        movies_X_users = self.rating_matrix().T
         i=0
-        for j in range(mXu.shape[1]):
-            u_list = mXu[:,j].tolist()
-            u_list = [n for n in u_list if n!=0]
-            print(u_list)
-            mean = st.mean(u_list)
+        for j in range(movies_X_users.shape[1]):
+            user_list = movies_X_users[:,j].tolist()
+            user_list = [n for n in user_list if n!=0]
+            mean = st.mean(user_list)
             print(mean)
-            while i < temp.shape[0]: 
+            while i < temp.shape[0]:            #looping over test dataset, note that it's not orderd and one user has several rarings
                 if temp.iloc[i,0]-1 == j:
-                    print(f"{temp.iloc[i,0]-1}={j}")
+                    print(f"{temp.iloc[i,0]-1}={j}")       #checking for user id
                     temp.rating[i] = mean
                     i+=1
                 else:
@@ -106,6 +105,5 @@ class RecSys():
         Create item-item similarity using Jaccard similarity
         """
         # your code here
-        #print(self.sim)
         movie_matrix = self.calc_movie_feature_matrix()
         self.sim = 1 - cdist(movie_matrix, movie_matrix, 'jaccard')
